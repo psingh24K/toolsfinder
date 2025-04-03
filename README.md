@@ -1,3 +1,63 @@
+# ToolsFinder
+
+A tool for finding and categorizing developer tools using AI. This application allows you to discover, analyze, and categorize developer tools using AI-powered content analysis.
+
+## Features ✨
+
+- **URL Analysis**: Automatically extract information from tool websites
+- **AI Categorization**: Uses Ollama (gemma3:12b) to categorize tools
+- **Semantic Search**: Find tools based on meaning, not just keywords
+- **Caching System**: Efficient performance with built-in caching
+- **Responsive UI**: Clean interface for managing your tool collection
+
+## Tech Stack 🛠️
+
+- **Backend**: Node.js with Express
+- **Database**: Supabase (PostgreSQL with pgvector)
+- **AI**: Ollama with gemma3:12b for content analysis
+- **Embeddings**: nomic-embed-text for semantic search
+- **Frontend**: HTML/CSS/JavaScript with Tailwind CSS
+
+## Installation 📦
+
+### Prerequisites
+
+- Node.js (v14+)
+- Ollama with gemma3:12b and nomic-embed-text models installed
+- Supabase account and project
+
+### Setup
+
+1. Clone the repository
+   ```bash
+   git clone https://github.com/psingh24K/toolsfinder.git
+   cd toolsfinder
+   ```
+
+2. Install dependencies
+   ```bash
+   cd server
+   npm install
+   # or if using pnpm
+   pnpm install
+   ```
+
+3. Create a `.env` file in the server directory with your Supabase credentials
+   ```
+   SUPABASE_URL=your_supabase_url
+   SUPABASE_KEY=your_supabase_key
+   OLLAMA_API=http://localhost:11434/api
+   ```
+
+4. Start the server
+   ```bash
+   npm start
+   # or if using pnpm
+   pnpm start
+   ```
+
+5. Access the application at `http://localhost:3000`
+
 ## API Endpoints 🔌
 
 - `GET /api/tools` - Fetch all tools
@@ -63,10 +123,11 @@ Feel free to submit issues and enhancement requests!
 
 ## License 📄
 
-[Your chosen license]
+MIT License
 
 ## Acknowledgments 🙏
 
 - Built with Express.js and Supabase
-- Uses pgvector for semantic search
+- Uses Ollama with gemma3:12b for AI analysis
+- Uses nomic-embed-text for semantic search
 - Designed for simplicity and efficiency
