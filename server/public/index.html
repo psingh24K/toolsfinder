@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ToolsFinder</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-800">ToolsFinder</h1>
+            <button onclick="showUrlModal()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+                Add Tool
+            </button>
+        </div>
+
+        <div class="mb-6">
+            <input type="text" id="searchInput" placeholder="Search tools..." class="w-full p-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        <div id="toolsList" class="space-y-4">
+            <!-- Tools will be listed here -->
+        </div>
+    </div>
+
+    <!-- URL Input Modal -->
+    <div id="urlModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center">
+        <div class="bg-white p-6 rounded-lg w-full max-w-md">
+            <h2 class="text-xl font-semibold mb-4">Add New Tool</h2>
+            <form id="urlForm">
+                <input type="url" name="url" required placeholder="Enter tool URL" class="w-full p-2 border rounded mb-4">
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="hideUrlModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800">
+                        Cancel
+                    </button>
+                    <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+                        Analyze
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Preview Modal -->
+    <div id="previewModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center">
+        <div class="bg-white p-6 rounded-lg w-full max-w-2xl">
+            <h2 class="text-xl font-semibold mb-4" id="previewTitle">Preview Tool</h2>
+            <div id="loadingIndicator" class="hidden">
+                <div class="flex items-center justify-center space-x-2 mb-4">
+                    <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+                    <span>Analyzing...</span>
+                </div>
+            </div>
+            <form id="previewForm" class="space-y-4">
+                <input type="hidden" name="id" id="toolId">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                    <input type="text" name="name" required class="w-full p-2 border rounded">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">URL</label>
+                    <input type="url" name="url" required class="w-full p-2 border rounded">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Summary</label>
+                    <textarea name="summary" required rows="4" class="w-full p-2 border rounded"></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Categories</label>
+                    <div class="flex flex-wrap gap-2 mb-2" id="categoryList">
+                        <!-- Categories will be listed here -->
+                    </div>
+                    <div class="flex gap-2">
+                        <input type="text" id="categoryInput" placeholder="Add category" class="flex-1 p-2 border rounded">
+                        <button type="button" onclick="addCategoryFromInput()" class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded">
+                            Add
+                        </button>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 mt-6">
+                    <button type="button" onclick="hidePreviewModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800">
+                        Cancel
+                    </button>
+                    <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+                        Save
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // State management
+        const state = {
+            categories: new Set(),
+            editingTool: null
+        };
+
+        // Modal management
+        function showUrlModal() {
+            document.getElementById('urlModal').classList.remove('hidden');
+            document.getElementById('urlForm').reset();
+        }
+
+        function hideUrlModal() {
+            document.getElementById('urlModal').classList.add('hidden');
+        }
+
+        function showPreviewModal(isEdit = false) {
+            document.getElementById('previewModal').classList.remove('hidden');
+            document.getElementById('previewTitle').textContent = isEdit ? 'Edit Tool' : 'Preview Tool';
+            if (!isEdit) {
+                document.getElementById('previewForm').reset();
+                state.categories.clear();
+                document.getElementById('categoryList').innerHTML = '';
+                state.editingTool = null;
+            }
+        }
+
+        function hidePreviewModal() {
+            document.getElementById('previewModal').classList.add('hidden');
+            state.editingTool = null;
+        }
+
+        function setLoading(isLoading) {
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const previewForm = document.getElementById('previewForm');
+            
+            if (isLoading) {
+                loadingIndicator.classList.remove('hidden');
+                previewForm.classList.add('hidden');
+            } else {
+                loadingIndicator.classList.add('hidden');
+                previewForm.classList.remove('hidden');
+            }
+        }
+
+        // Category management
+        function addCategory(category) {
+            if (!category || state.categories.has(category)) return;
+            
+            state.categories.add(category);
+            updateCategoryList();
+        }
+
+        function removeCategory(category) {
+            state.categories.delete(category);
+            updateCategoryList();
+        }
+
+        function addCategoryFromInput() {
+            const input = document.getElementById('categoryInput');
+            const category = input.value.trim().toLowerCase();
+            
+            if (category) {
+                addCategory(category);
+                input.value = '';
+            }
+        }
+
+        function updateCategoryList() {
+            const categoryList = document.getElementById('categoryList');
+            categoryList.innerHTML = Array.from(state.categories).map(category => `
+                <span class="category-tag inline-flex items-center gap-1 px-2 py-1 bg-gray-200 rounded-full text-sm text-gray-700">
+                    ${category}
+                    <button type="button" onclick="removeCategory('${category}')" class="text-gray-500 hover:text-gray-700">×</button>
+                </span>
+            `).join('');
+        }
+
+        // Edit tool
+        function editTool(tool) {
+            state.editingTool = tool;
+            showPreviewModal(true);
+            
+            const previewForm = document.getElementById('previewForm');
+            previewForm.elements.id.value = tool.id;
+            previewForm.elements.name.value = tool.name;
+            previewForm.elements.url.value = tool.url;
+            previewForm.elements.summary.value = tool.summary;
+            
+            state.categories.clear();
+            tool.categories.forEach(addCategory);
+        }
+
+        // Delete tool
+        async function deleteTool(id, name) {
+            if (!confirm(`Are you sure you want to delete "${name}"?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/tools/${id}`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+                if (!data.success) {
+                    throw new Error(data.error || 'Failed to delete tool');
+                }
+
+                await fetchTools();
+            } catch (error) {
+                console.error('Error deleting tool:', error);
+                alert(error.message || 'Error deleting tool. Please try again.');
+            }
+        }
+
+        // URL form submission
+        document.getElementById('urlForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const url = new FormData(e.target).get('url');
+            
+            hideUrlModal();
+            showPreviewModal();
+            setLoading(true);
+
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ url })
+                });
+
+                const data = await response.json();
+                if (!data.success) {
+                    throw new Error(data.error || 'Failed to analyze URL');
+                }
+
+                // Update preview form with analysis
+                const previewForm = document.getElementById('previewForm');
+                previewForm.elements.name.value = data.analysis.name;
+                previewForm.elements.url.value = data.analysis.url;
+                previewForm.elements.summary.value = data.analysis.summary;
+                
+                state.categories.clear();
+                data.analysis.categories.forEach(addCategory);
+                
+                setLoading(false);
+            } catch (error) {
+                console.error('Error analyzing tool:', error);
+                alert(error.message || 'Error analyzing tool. Please try again.');
+                hidePreviewModal();
+                showUrlModal();
+            }
+        });
+
+        // Preview form submission
+        document.getElementById('previewForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            
+            try {
+                const toolData = {
+                    name: formData.get('name'),
+                    url: formData.get('url'),
+                    summary: formData.get('summary'),
+                    categories: Array.from(state.categories)
+                };
+
+                const id = formData.get('id');
+                const method = id ? 'PUT' : 'POST';
+                const endpoint = id ? `/tools/${id}` : '/tools';
+
+                const response = await fetch(endpoint, {
+                    method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(toolData)
+                });
+
+                const data = await response.json();
+                if (!data.success) {
+                    throw new Error(data.error || 'Failed to save tool');
+                }
+
+                hidePreviewModal();
+                await fetchTools();
+            } catch (error) {
+                console.error('Error saving tool:', error);
+                alert(error.message || 'Error saving tool. Please try again.');
+            }
+        });
+
+        // Search functionality with debounce
+        let searchTimeout;
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            const query = e.target.value.trim();
+            
+            // Clear previous timeout
+            if (searchTimeout) {
+                clearTimeout(searchTimeout);
+            }
+
+            // If query is empty, show all tools
+            if (!query) {
+                fetchTools();
+                return;
+            }
+
+            // Set new timeout for semantic search
+            searchTimeout = setTimeout(async () => {
+                try {
+                    const response = await fetch('/search', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ query })
+                    });
+
+                    const data = await response.json();
+                    if (!data.success) {
+                        throw new Error(data.error);
+                    }
+
+                    // Update tools list with search results
+                    const toolsList = document.getElementById('toolsList');
+                    toolsList.innerHTML = '';
+
+                    if (data.results.length > 0) {
+                        data.results.forEach(tool => {
+                            const categories = Array.isArray(tool.categories) ? tool.categories : [];
+                            toolsList.innerHTML += `
+                                <div class="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                                    <div class="flex justify-between items-start mb-2">
+                                        <h3 class="text-xl font-semibold text-gray-800">${tool.name}</h3>
+                                        <div class="flex gap-2">
+                                            <button onclick="editTool(${JSON.stringify(tool).replace(/"/g, '&quot;')})" 
+                                                    class="text-blue-500 hover:text-blue-600">
+                                                Edit
+                                            </button>
+                                            <button onclick="deleteTool('${tool.id}', '${tool.name.replace(/'/g, "\\'")}')" 
+                                                    class="text-red-500 hover:text-red-600">
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <a href="${tool.url}" target="_blank" class="text-blue-500 hover:underline">${tool.url}</a>
+                                    <p class="mt-2 text-gray-600">${tool.summary}</p>
+                                    <div class="mt-2 flex flex-wrap gap-2">
+                                        ${categories.map(category => 
+                                            `<span class="category-tag px-2 py-1 bg-gray-200 rounded-full text-sm text-gray-700">${category}</span>`
+                                        ).join('')}
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    } else {
+                        toolsList.innerHTML = '<p class="text-gray-500">No tools found.</p>';
+                    }
+                } catch (error) {
+                    console.error('Error searching tools:', error);
+                }
+            }, 300); // 300ms debounce delay
+        });
+
+        // Fetch and display tools
+        async function fetchTools() {
+            try {
+                const response = await fetch('/tools');
+                const data = await response.json();
+                const toolsList = document.getElementById('toolsList');
+                toolsList.innerHTML = '';
+
+                if (data.success && data.tools.length > 0) {
+                    data.tools.forEach(tool => {
+                        const categories = Array.isArray(tool.categories) ? tool.categories : [];
+                        toolsList.innerHTML += `
+                            <div class="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                                <div class="flex justify-between items-start mb-2">
+                                    <h3 class="text-xl font-semibold text-gray-800">${tool.name}</h3>
+                                    <div class="flex gap-2">
+                                        <button onclick="editTool(${JSON.stringify(tool).replace(/"/g, '&quot;')})" 
+                                                class="text-blue-500 hover:text-blue-600">
+                                            Edit
+                                        </button>
+                                        <button onclick="deleteTool('${tool.id}', '${tool.name.replace(/'/g, "\\'")}')" 
+                                                class="text-red-500 hover:text-red-600">
+                                            Delete
+                                        </button>
+                                    </div>
+                                </div>
+                                <a href="${tool.url}" target="_blank" class="text-blue-500 hover:underline">${tool.url}</a>
+                                <p class="mt-2 text-gray-600">${tool.summary}</p>
+                                <div class="mt-2 flex flex-wrap gap-2">
+                                    ${categories.map(category => 
+                                        `<span class="category-tag px-2 py-1 bg-gray-200 rounded-full text-sm text-gray-700">${category}</span>`
+                                    ).join('')}
+                                </div>
+                            </div>
+                        `;
+                    });
+                } else {
+                    toolsList.innerHTML = '<p class="text-gray-500">No tools found.</p>';
+                }
+            } catch (error) {
+                console.error('Error fetching tools:', error);
+            }
+        }
+
+        // Initial load
+        fetchTools();
+
+        // Category input keyboard shortcut
+        document.getElementById('categoryInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addCategoryFromInput();
+            }
+        });
+    </script>
+</body>
+</html>
